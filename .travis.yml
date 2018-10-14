@@ -1,0 +1,29 @@
+language: cpp
+compiler: gcc
+sudo: require
+dist: trusty
+
+before_install:
+  - sudo add-apt-repository ppa:beineri/opt-qt593-trusty -y
+  - sudo apt-get update -qq
+
+install:
+  - sudo apt-get -y install qt59base
+  - source /opt/qt*/bin/qt*-env.sh
+  - wget -c -nv "https://github.com/probonopd/linuxdeployqt/releases/download/continuous/linuxdeployqt-continuous-x86_64.AppImage" -O /tmp/linuxdeployqt
+  - chmod +x /tmp/linuxdeployqt
+
+script:
+  - mkdir build
+  - cd build
+  - cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=appdir/usr/
+  - make
+  - make install
+
+  - unset QTDIR QT_PLUGIN_PATH LD_LIBRARY_PATH
+  - export VERSION=$(git describe) # linuxdeployqt uses this for naming the file
+  - /tmp/linuxdeployqt appdir/usr/share/applications/*.desktop -appimage
+
+after_success:
+  - curl --upload-file GammaRay-*.AppImage https://transfer.sh
+  - find -executable -type f -exec ldd {} \; | grep " => /usr" | cut -d " " -f 2-3 | sort | uniq
